@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Дневник диабетика — график сахара, редактирование записей</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 0px; background: transparent; }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
+        
+        .fade-enter { opacity: 0; transform: translateY(10px); }
+        .fade-enter-active { opacity: 1; transform: translateY(0); transition: opacity 0.3s, transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        /* Анимация пульсации для кнопок редактирования */
+        .action-btn {
+            transition: all 0.2s ease;
+        }
+        .action-btn:active {
+            transform: scale(0.92);
+        }
+        /* Стили для всплывающего окна редактирования */
+        .modal-backdrop {
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 md:bg-gray-200 text-gray-900 antialiased flex items-center justify-center h-screen overflow-hidden selection:bg-gray-200">
+
+    <!-- Responsive App Container -->
+    <div class="w-full h-full md:w-11/12 lg:w-3/4 max-w-5xl md:h-[90vh] bg-gray-50 flex flex-col relative md:rounded-[2rem] md:shadow-[0_20px_50px_rgb(0,0,0,0.1)] overflow-hidden border-0 md:border border-gray-200/60">
+        
+        <!-- Header -->
+        <header class="absolute top-0 w-full z-20 bg-white/80 backdrop-blur-md border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+            <h1 class="text-lg font-semibold tracking-tight">DIABLOG</h1>
+            <div class="flex items-center gap-2">
+                <span id="header-uk" class="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded-md hidden md:block">УК: 1.5</span>
+            </div>
+        </header>
+
+        <!-- Main Content Area -->
+        <main class="flex-1 overflow-y-auto pt-20 pb-32 px-5 md:px-8">
+            
+            <!-- VIEW: HOME (ГЛАВНАЯ) -->
+            <section id="view-home" class="view-section flex flex-col gap-6 w-full max-w-2xl mx-auto">
+                <div class="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100/50 rounded-2xl p-6 md:p-8 shadow-sm relative overflow-hidden">
+                    <div class="relative z-10">
+                        <span class="inline-block bg-emerald-100 text-emerald-800 text-[10px] uppercase tracking-wider font-semibold px-2 py-1 rounded-md mb-3">Новое обновление</span>
+                        <h2 class="text-xl md:text-2xl font-semibold tracking-tight text-emerald-950 mb-2">Представляем график сахара! 📈</h2>
+                        <p class="text-sm md:text-base text-emerald-800/80 leading-relaxed max-w-md">
+                            Теперь вы можете легко отслеживать динамику глюкозы за день. Визуализируйте тренды, находите закономерности после приемов пищи и держите диабет под контролем с помощью нашей встроенной аналитики.
+                        </p>
+                        <button onclick="switchTab('view-chart')" class="mt-6 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium px-5 py-2.5 rounded-xl transition-colors shadow-sm">
+                            Посмотреть график
+                        </button>
+                    </div>
+                    <iconify-icon icon="solar:chart-square-linear" class="absolute -bottom-6 -right-6 text-emerald-500/10" width="160" height="160"></iconify-icon>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-1">
+                        <span class="text-xs text-gray-500 flex items-center gap-1">Средний сахар</span>
+                        <span class="text-lg font-medium tracking-tight" id="stat-avg-sugar">--</span>
+                    </div>
+                    <div class="bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-1">
+                        <span class="text-xs text-gray-500 flex items-center gap-1">Съедено ХЕ</span>
+                        <span class="text-lg font-medium tracking-tight" id="stat-total-xe">--</span>
+                    </div>
+                    <div class="bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-1 md:col-span-2 justify-center items-start">
+                        <button onclick="switchTab('view-diary')" class="text-sm font-medium text-gray-900 flex items-center gap-2 hover:text-gray-600 transition-colors">
+                            <iconify-icon icon="solar:add-circle-linear" width="20"></iconify-icon> Добавить запись
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW: DIARY (ДНЕВНИК) с возможностью редактирования/удаления -->
+            <section id="view-diary" class="view-section hidden w-full h-full">
+                <div class="md:grid md:grid-cols-12 md:gap-8 h-full">
+                    <!-- Left Col: Form -->
+                    <div class="md:col-span-5 flex flex-col gap-6 mb-8 md:mb-0">
+                        <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm sticky top-0">
+                            <div class="flex items-center justify-between mb-5">
+                                <h2 class="text-base font-medium tracking-tight">Новая запись</h2>
+                                <span class="text-xs text-gray-400 font-medium bg-gray-50 px-2 py-1 rounded-md" id="current-time"></span>
+                            </div>
+                            
+                            <form id="entry-form" onsubmit="saveEntry(event)" class="flex flex-col gap-4">
+                                <div class="grid grid-cols-3 gap-3">
+                                    <div class="flex flex-col gap-1.5">
+                                        <label class="text-xs text-gray-500 flex items-center gap-1"><iconify-icon icon="solar:waterdrop-linear"></iconify-icon>Сахар</label>
+                                        <input type="number" id="input-sugar" step="0.1" placeholder="5.5" required class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-base rounded-lg px-3 py-2.5 outline-none focus:border-gray-900 focus:bg-white focus:ring-1 focus:ring-gray-900 transition-all">
+                                    </div>
+                                    <div class="flex flex-col gap-1.5">
+                                        <label class="text-xs text-gray-500 flex items-center gap-1"><iconify-icon icon="solar:pie-chart-2-linear"></iconify-icon>Еда (ХЕ)</label>
+                                        <input type="number" id="input-xe" step="0.5" placeholder="0" class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-base rounded-lg px-3 py-2.5 outline-none focus:border-gray-900 focus:bg-white focus:ring-1 focus:ring-gray-900 transition-all">
+                                    </div>
+                                    <div class="flex flex-col gap-1.5">
+                                        <label class="text-xs text-gray-500 flex items-center gap-1"><iconify-icon icon="solar:syringe-linear"></iconify-icon>Инсулин</label>
+                                        <input type="number" id="input-insulin" step="1" placeholder="0" class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-base rounded-lg px-3 py-2.5 outline-none focus:border-gray-900 focus:bg-white focus:ring-1 focus:ring-gray-900 transition-all">
+                                    </div>
+                                </div>
+                                
+                                <div class="flex flex-col gap-1.5 mb-2">
+                                    <label class="text-xs text-gray-500 flex items-center gap-1"><iconify-icon icon="solar:plate-linear"></iconify-icon>Что съел</label>
+                                    <input type="text" id="input-food" placeholder="Например: Каша овсяная, яблоко" class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg px-3 py-2.5 outline-none focus:border-gray-900 focus:bg-white focus:ring-1 focus:ring-gray-900 transition-all">
+                                </div>
+                                
+                                <button type="submit" class="w-full bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
+                                    <iconify-icon icon="solar:check-circle-linear" width="18"></iconify-icon>
+                                    Сохранить
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Right Col: History with Edit/Delete -->
+                    <div class="md:col-span-7 flex flex-col h-full">
+                        <div class="flex items-center justify-between mb-4 px-1">
+                            <h3 class="text-xs font-medium text-gray-400 uppercase tracking-wider">История за сегодня</h3>
+                            <span class="text-xs text-gray-400" id="history-count">0 записей</span>
+                        </div>
+                        <div id="history-list" class="flex flex-col gap-3 overflow-y-auto pb-4">
+                            <!-- JS динамически заполняет список с кнопками редактирования/удаления -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW: CHART (Рабочий график сахара) -->
+            <section id="view-chart" class="view-section hidden flex flex-col gap-6 max-w-3xl mx-auto w-full">
+                <div>
+                    <h2 class="text-xl font-semibold tracking-tight mb-1">Аналитика</h2>
+                    <p class="text-sm text-gray-500">Динамика уровня глюкозы за сегодня (по времени записи)</p>
+                </div>
+
+                <div class="bg-white border border-gray-200 rounded-2xl p-5 shadow-sm">
+                    <div class="flex justify-between items-center mb-6 flex-wrap gap-2">
+                        <div class="flex items-center gap-3">
+                            <div class="flex items-center gap-1">
+                                <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                                <span class="text-xs text-gray-600">Целевой диапазон</span>
+                            </div>
+                            <div class="flex items-center gap-1">
+                                <div class="w-3 h-3 rounded-full bg-gray-900"></div>
+                                <span class="text-xs text-gray-600">Уровень сахара</span>
+                            </div>
+                        </div>
+                        <div class="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-full" id="chart-empty-msg"></div>
+                    </div>
+
+                    <div class="relative w-full h-56 md:h-72">
+                        <div class="absolute left-0 top-0 h-full flex flex-col justify-between text-xs text-gray-400 pb-6">
+                            <span>15.0</span><span>10.0</span><span>5.0</span><span>0.0</span>
+                        </div>
+                        <div class="absolute left-8 right-0 top-0 bottom-0">
+                            <svg id="sugar-line-chart" class="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 100 100">
+                                <!-- Сетка и целевой диапазон будут перерисованы динамически, но оставим базовые линии -->
+                                <line x1="0" y1="0" x2="100" y2="0" stroke="#f3f4f6" stroke-width="0.5"></line>
+                                <line x1="0" y1="33.3" x2="100" y2="33.3" stroke="#f3f4f6" stroke-width="0.5"></line>
+                                <line x1="0" y1="66.6" x2="100" y2="66.6" stroke="#f3f4f6" stroke-width="0.5"></line>
+                                <line x1="0" y1="100" x2="100" y2="100" stroke="#f3f4f6" stroke-width="0.5"></line>
+                                <rect id="target-range-rect" x="0" y="48" width="100" height="25" fill="#10b981" fill-opacity="0.08"></rect>
+                                <line id="target-min-line" x1="0" y1="48" x2="100" y2="48" stroke="#10b981" stroke-width="0.5" stroke-dasharray="2,2" opacity="0.6"></line>
+                                <line id="target-max-line" x1="0" y1="73" x2="100" y2="73" stroke="#10b981" stroke-width="0.5" stroke-dasharray="2,2" opacity="0.6"></line>
+                                <polyline id="sugar-polyline" points="10,60 30,40 50,65 70,55 90,80" fill="none" stroke="#111827" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round" opacity="0"></polyline>
+                                <g id="sugar-dots-group"></g>
+                            </svg>
+                            <div id="chart-labels-container" class="absolute -bottom-6 left-0 right-0 flex justify-between text-xs text-gray-400 px-1"></div>
+                        </div>
+                    </div>
+                    <div class="mt-8 text-center text-xs text-gray-400 border-t border-gray-100 pt-4">
+                        * График показывает все записи за сегодня, отсортированные по времени
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW: PROFILE -->
+            <section id="view-profile" class="view-section hidden flex flex-col gap-6 max-w-2xl mx-auto w-full">
+                <div class="bg-white border border-gray-200 rounded-3xl p-8 shadow-sm flex flex-col items-center gap-4">
+                    <div class="w-28 h-28 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 border border-gray-200 shadow-sm overflow-hidden">
+                        <iconify-icon icon="solar:user-bold" width="56"></iconify-icon>
+                    </div>
+                    <div class="text-center flex flex-col items-center">
+                        <h2 class="text-xl font-semibold tracking-tight text-gray-900" id="display-name">Имя Пользователя</h2>
+                        <span class="text-sm font-medium text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full mt-2" id="display-uk">УК: 1.5 ед/ХЕ</span>
+                    </div>
+                    <button onclick="openSettings()" class="mt-4 w-full md:w-auto md:px-8 bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-900 text-sm font-medium py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2">
+                        <iconify-icon icon="solar:settings-linear" width="18"></iconify-icon> Настройки профиля
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Floating Dock Navigation -->
+        <div class="absolute bottom-6 left-0 w-full px-5 pointer-events-none flex justify-center z-40">
+            <nav class="relative pointer-events-auto bg-white/90 backdrop-blur-md border border-gray-200/80 rounded-full p-2 flex items-center gap-1 md:gap-4 shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
+                <div id="nav-indicator" class="absolute h-14 bg-gray-100 rounded-full transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] z-0"></div>
+                <button id="btn-home" onclick="switchTab('view-home', this)" data-tab="view-home" class="nav-btn relative z-10 w-16 h-14 rounded-full flex flex-col items-center justify-center gap-1 transition-colors duration-300 text-gray-900">
+                    <iconify-icon icon="solar:smart-home-linear" width="22"></iconify-icon>
+                    <span class="text-[10px] font-medium tracking-tight">Главная</span>
+                </button>
+                <button onclick="switchTab('view-diary', this)" data-tab="view-diary" class="nav-btn relative z-10 w-16 h-14 rounded-full flex flex-col items-center justify-center gap-1 transition-colors duration-300 text-gray-400 hover:text-gray-900">
+                    <iconify-icon icon="solar:notebook-linear" width="22"></iconify-icon>
+                    <span class="text-[10px] font-medium tracking-tight">Дневник</span>
+                </button>
+                <button onclick="switchTab('view-chart', this)" data-tab="view-chart" class="nav-btn relative z-10 w-16 h-14 rounded-full flex flex-col items-center justify-center gap-1 transition-colors duration-300 text-gray-400 hover:text-gray-900">
+                    <iconify-icon icon="solar:chart-square-linear" width="22"></iconify-icon>
+                    <span class="text-[10px] font-medium tracking-tight">График</span>
+                </button>
+                <button onclick="switchTab('view-profile', this)" data-tab="view-profile" class="nav-btn relative z-10 w-16 h-14 rounded-full flex flex-col items-center justify-center gap-1 transition-colors duration-300 text-gray-400 hover:text-gray-900">
+                    <iconify-icon icon="solar:user-circle-linear" width="22"></iconify-icon>
+                    <span class="text-[10px] font-medium tracking-tight">Профиль</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- SETTINGS BOTTOM SHEET DRAWER -->
+        <div id="drawer-overlay" class="absolute inset-0 bg-gray-900/40 backdrop-blur-sm z-40 hidden opacity-0 transition-opacity duration-300" onclick="closeSettings()"></div>
+        <div id="settings-drawer" class="absolute bottom-0 left-0 w-full bg-white rounded-t-[2rem] shadow-[0_-10px_40px_rgb(0,0,0,0.1)] z-50 flex flex-col transition-transform duration-300 translate-y-full max-h-[85vh]">
+            <div id="drawer-handle" class="w-full flex justify-center pt-5 pb-3 touch-none cursor-grab active:cursor-grabbing">
+                <div class="w-12 h-1.5 bg-gray-200 rounded-full"></div>
+            </div>
+            <div class="px-6 pb-10 overflow-y-auto flex flex-col gap-6">
+                <div>
+                    <h3 class="text-xl font-semibold tracking-tight text-gray-900">Настройки профиля</h3>
+                    <p class="text-sm text-gray-500 mt-1">Измените ваши данные и целевые значения</p>
+                </div>
+                <div class="flex flex-col gap-4">
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-xs font-medium text-gray-500">Имя</label>
+                        <input type="text" id="setting-name" class="w-full bg-gray-50 border border-gray-200 text-sm rounded-xl px-4 py-3 outline-none focus:border-gray-900 transition-colors">
+                    </div>
+                    <div class="flex flex-col gap-1.5">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-medium text-gray-500">Углеводный коэф. (УК)</label>
+                            <span class="text-[10px] text-gray-400">Ед. инсулина на 1 ХЕ</span>
+                        </div>
+                        <input type="number" step="0.1" id="setting-uk" class="w-full bg-gray-50 border border-gray-200 text-sm rounded-xl px-4 py-3 outline-none focus:border-gray-900 transition-colors">
+                    </div>
+                    <div class="grid grid-cols-2 gap-4 mt-2">
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs font-medium text-gray-500">Мин. сахар</label>
+                            <input type="number" step="0.1" id="setting-min" class="w-full bg-gray-50 border border-gray-200 text-sm rounded-xl px-4 py-3 outline-none focus:border-gray-900 transition-colors text-center">
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs font-medium text-gray-500">Макс. сахар</label>
+                            <input type="number" step="0.1" id="setting-max" class="w-full bg-gray-50 border border-gray-200 text-sm rounded-xl px-4 py-3 outline-none focus:border-gray-900 transition-colors text-center">
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-1.5 mt-2">
+                        <label class="text-xs font-medium text-gray-500">Лимит ХЕ (в день)</label>
+                        <input type="number" id="setting-limit" class="w-full bg-gray-50 border border-gray-200 text-sm rounded-xl px-4 py-3 outline-none focus:border-gray-900 transition-colors">
+                    </div>
+                    <button onclick="saveProfile()" class="mt-4 w-full bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium py-3.5 rounded-xl transition-colors">
+                        Сохранить изменения
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно редактирования записи (простое, не меняя стиль) -->
+    <div id="edit-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm hidden transition-all" onclick="closeEditModal(event)">
+        <div class="bg-white rounded-2xl w-[90%] max-w-md p-6 shadow-2xl" onclick="event.stopPropagation()">
+            <h3 class="text-lg font-semibold mb-4">Редактировать запись</h3>
+            <input type="hidden" id="edit-id">
+            <div class="space-y-3">
+                <div><label class="text-xs text-gray-500">Сахар</label><input type="number" step="0.1" id="edit-sugar" class="w-full border border-gray-200 rounded-lg p-2"></div>
+                <div><label class="text-xs text-gray-500">ХЕ</label><input type="number" step="0.5" id="edit-xe" class="w-full border border-gray-200 rounded-lg p-2"></div>
+                <div><label class="text-xs text-gray-500">Инсулин</label><input type="number" step="1" id="edit-insulin" class="w-full border border-gray-200 rounded-lg p-2"></div>
+                <div><label class="text-xs text-gray-500">Что съел</label><input type="text" id="edit-food" class="w-full border border-gray-200 rounded-lg p-2"></div>
+            </div>
+            <div class="flex gap-3 mt-6">
+                <button onclick="updateEntry()" class="flex-1 bg-gray-900 text-white py-2 rounded-xl text-sm">Сохранить</button>
+                <button onclick="closeEditModal()" class="flex-1 bg-gray-100 text-gray-700 py-2 rounded-xl text-sm">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ---------- Глобальные данные ----------
+        let profileData = JSON.parse(localStorage.getItem('diablog_profile')) || {
+            name: "Алексей", uk: 1.5, targetMin: 4.0, targetMax: 7.8, limitXe: 15
+        };
+        let diaryEntries = JSON.parse(localStorage.getItem('diablog_entries')) || [];
+
+        // ---------- Инициализация и рендеры ----------
+        function initApp() {
+            updateTimeLoop();
+            applyProfileData();
+            renderHistory();
+            calculateStats();
+            setTimeout(() => updateNavIndicator(document.getElementById('btn-home')), 100);
+        }
+
+        function updateTimeLoop() {
+            const timeEl = document.getElementById('current-time');
+            setInterval(() => {
+                const now = new Date();
+                timeEl.innerText = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            }, 1000);
+            document.getElementById('current-time').innerText = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function updateNavIndicator(btn) {
+            const indicator = document.getElementById('nav-indicator');
+            if (btn && indicator) {
+                indicator.style.left = `${btn.offsetLeft}px`;
+                indicator.style.width = `${btn.offsetWidth}px`;
+            }
+        }
+
+        function switchTab(tabId, clickedBtn = null) {
+            if (!clickedBtn) clickedBtn = document.querySelector(`.nav-btn[data-tab="${tabId}"]`);
+            document.querySelectorAll('.view-section').forEach(el => {
+                el.classList.add('hidden');
+                el.classList.remove('fade-enter', 'fade-enter-active');
+            });
+            const targetView = document.getElementById(tabId);
+            targetView.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                targetView.classList.add('fade-enter');
+                requestAnimationFrame(() => targetView.classList.add('fade-enter-active'));
+            });
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-gray-900');
+                btn.classList.add('text-gray-400');
+            });
+            if (clickedBtn) {
+                clickedBtn.classList.remove('text-gray-400');
+                clickedBtn.classList.add('text-gray-900');
+                updateNavIndicator(clickedBtn);
+            }
+            if (tabId === 'view-home') calculateStats();
+            if (tabId === 'view-chart') renderSugarChart();
+        }
+
+        function applyProfileData() {
+            document.getElementById('display-name').innerText = profileData.name;
+            document.getElementById('display-uk').innerText = `УК: ${profileData.uk} ед/ХЕ`;
+            document.getElementById('header-uk').innerText = `УК: ${profileData.uk}`;
+            document.getElementById('setting-name').value = profileData.name;
+            document.getElementById('setting-uk').value = profileData.uk;
+            document.getElementById('setting-min').value = profileData.targetMin;
+            document.getElementById('setting-max').value = profileData.targetMax;
+            document.getElementById('setting-limit').value = profileData.limitXe;
+        }
+
+        // Сохранение новой записи
+        function saveEntry(e) {
+            e.preventDefault();
+            const sugar = parseFloat(document.getElementById('input-sugar').value);
+            const xe = parseFloat(document.getElementById('input-xe').value) || 0;
+            const insulin = parseFloat(document.getElementById('input-insulin').value) || 0;
+            const food = document.getElementById('input-food').value.trim();
+            const time = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            const entry = { id: Date.now(), time, sugar, xe, insulin, food };
+            diaryEntries.unshift(entry);
+            localStorage.setItem('diablog_entries', JSON.stringify(diaryEntries));
+            document.getElementById('entry-form').reset();
+            renderHistory();
+            calculateStats();
+            renderSugarChart();
+        }
+
+        // Удаление записи
+        function deleteEntry(entryId) {
+            if (confirm('Удалить запись?')) {
+                diaryEntries = diaryEntries.filter(e => e.id !== entryId);
+                localStorage.setItem('diablog_entries', JSON.stringify(diaryEntries));
+                renderHistory();
+                calculateStats();
+                renderSugarChart();
+            }
+        }
+
+        // Открыть модалку редактирования
+        let currentEditId = null;
+        function openEditModal(entryId) {
+            const entry = diaryEntries.find(e => e.id === entryId);
+            if (!entry) return;
+            currentEditId = entryId;
+            document.getElementById('edit-id').value = entryId;
+            document.getElementById('edit-sugar').value = entry.sugar;
+            document.getElementById('edit-xe').value = entry.xe;
+            document.getElementById('edit-insulin').value = entry.insulin;
+            document.getElementById('edit-food').value = entry.food || '';
+            document.getElementById('edit-modal').classList.remove('hidden');
+        }
+
+        function closeEditModal(event) {
+            if (event && event.target !== event.currentTarget && event.target.closest('#edit-modal')) return;
+            document.getElementById('edit-modal').classList.add('hidden');
+            currentEditId = null;
+        }
+
+        function updateEntry() {
+            if (!currentEditId) return;
+            const newSugar = parseFloat(document.getElementById('edit-sugar').value);
+            const newXe = parseFloat(document.getElementById('edit-xe').value) || 0;
+            const newInsulin = parseFloat(document.getElementById('edit-insulin').value) || 0;
+            const newFood = document.getElementById('edit-food').value.trim();
+            const index = diaryEntries.findIndex(e => e.id === currentEditId);
+            if (index !== -1) {
+                diaryEntries[index] = { ...diaryEntries[index], sugar: newSugar, xe: newXe, insulin: newInsulin, food: newFood };
+                localStorage.setItem('diablog_entries', JSON.stringify(diaryEntries));
+                renderHistory();
+                calculateStats();
+                renderSugarChart();
+            }
+            closeEditModal();
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('history-list');
+            const countLabel = document.getElementById('history-count');
+            list.innerHTML = '';
+            countLabel.innerText = `${diaryEntries.length} записей`;
+            if (diaryEntries.length === 0) {
+                list.innerHTML = `<div class="text-center text-sm text-gray-400 py-8">Пока нет записей. Добавьте первую!</div>`;
+                return;
+            }
+            diaryEntries.forEach(entry => {
+                let sugarColor = 'text-gray-900';
+                if (entry.sugar < profileData.targetMin) sugarColor = 'text-blue-500';
+                else if (entry.sugar > profileData.targetMax) sugarColor = 'text-red-500';
+                else sugarColor = 'text-emerald-600';
+                const foodHtml = entry.food ? `<div class="col-span-3 mt-3 pt-3 border-t border-gray-50 flex items-start gap-2">
+                        <iconify-icon icon="solar:plate-linear" class="text-gray-400 mt-0.5" width="14"></iconify-icon>
+                        <span class="text-xs text-gray-600 leading-tight">${escapeHtml(entry.food)}</span>
+                    </div>` : '';
+                const html = `
+                    <div class="flex items-stretch gap-2 bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
+                        <div class="flex flex-col items-center justify-center pr-3 border-r border-gray-100 w-16">
+                            <span class="text-sm font-medium text-gray-900">${entry.time}</span>
+                        </div>
+                        <div class="flex-1">
+                            <div class="grid grid-cols-3 gap-2 items-center">
+                                <div><span class="text-[10px] text-gray-400">Сахар</span><span class="text-base font-semibold ${sugarColor} block">${entry.sugar.toFixed(1)}</span></div>
+                                <div><span class="text-[10px] text-gray-400">ХЕ</span><span class="text-base font-medium">${entry.xe}</span></div>
+                                <div><span class="text-[10px] text-gray-400">Инсулин</span><span class="text-base font-medium">${entry.insulin} <span class="text-xs">ед</span></span></div>
+                            </div>
+                            ${foodHtml}
+                            <div class="flex gap-3 mt-3 justify-end">
+                                <button onclick="openEditModal(${entry.id})" class="action-btn text-xs text-gray-500 hover:text-gray-800 flex items-center gap-1"><iconify-icon icon="solar:pen-linear" width="14"></iconify-icon> Изменить</button>
+                                <button onclick="deleteEntry(${entry.id})" class="action-btn text-xs text-red-400 hover:text-red-600 flex items-center gap-1"><iconify-icon icon="solar:trash-bin-trash-linear" width="14"></iconify-icon> Удалить</button>
+                            </div>
+                        </div>
+                    </div>`;
+                list.insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        function calculateStats() {
+            if (diaryEntries.length === 0) { document.getElementById('stat-avg-sugar').innerText = '--'; document.getElementById('stat-total-xe').innerHTML = `0 <span class="text-xs text-gray-400">/ ${profileData.limitXe}</span>`; return; }
+            let totalSugar = 0, totalXe = 0;
+            diaryEntries.forEach(e => { totalSugar += e.sugar; totalXe += e.xe; });
+            const avgSugar = (totalSugar / diaryEntries.length).toFixed(1);
+            document.getElementById('stat-avg-sugar').innerText = avgSugar;
+            document.getElementById('stat-total-xe').innerHTML = `${totalXe} <span class="text-xs text-gray-400">/ ${profileData.limitXe}</span>`;
+        }
+
+        // ---------- РАБОЧИЙ ГРАФИК САХАРА ----------
+        function renderSugarChart() {
+            const todayStr = new Date().toLocaleDateString('ru-RU');
+            const todayEntries = diaryEntries.filter(entry => {
+                const entryDate = new Date(entry.id).toLocaleDateString('ru-RU');
+                return entryDate === todayStr;
+            }).sort((a,b) => a.id - b.id);
+            
+            const svg = document.getElementById('sugar-line-chart');
+            const polyline = document.getElementById('sugar-polyline');
+            const dotsGroup = document.getElementById('sugar-dots-group');
+            const labelsDiv = document.getElementById('chart-labels-container');
+            const emptyMsg = document.getElementById('chart-empty-msg');
+            
+            if (todayEntries.length === 0) {
+                polyline.setAttribute('opacity', '0');
+                dotsGroup.innerHTML = '';
+                labelsDiv.innerHTML = '<span class="text-gray-400 w-full text-center">Нет записей за сегодня</span>';
+                emptyMsg.innerText = 'Нет данных';
+                return;
+            }
+            emptyMsg.innerText = `${todayEntries.length} записей`;
+            
+            const values = todayEntries.map(e => Math.min(15, Math.max(0, e.sugar)));
+            const minSugarVal = 0, maxSugarVal = 15;
+            const yScale = (val) => 100 - ((val - minSugarVal) / (maxSugarVal - minSugarVal)) * 100;
+            const points = values.map((v, idx) => ({ x: (idx / (values.length - 1 || 1)) * 100, y: yScale(v) }));
+            
+            let pointsStr = points.map(p => `${p.x},${p.y}`).join(' ');
+            polyline.setAttribute('points', pointsStr);
+            polyline.setAttribute('opacity', '1');
+            
+            dotsGroup.innerHTML = '';
+            points.forEach((p, i) => {
+                let fillColor = '#111827';
+                if (todayEntries[i].sugar < profileData.targetMin) fillColor = '#3b82f6';
+                else if (todayEntries[i].sugar > profileData.targetMax) fillColor = '#ef4444';
+                else fillColor = '#10b981';
+                const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                dot.setAttribute("cx", p.x);
+                dot.setAttribute("cy", p.y);
+                dot.setAttribute("r", "3");
+                dot.setAttribute("fill", fillColor);
+                dot.setAttribute("stroke", "white");
+                dot.setAttribute("stroke-width", "1.5");
+                dotsGroup.appendChild(dot);
+            });
+            
+            // Обновление целевого диапазона на графике согласно профилю
+            const yMinTarget = yScale(profileData.targetMin);
+            const yMaxTarget = yScale(profileData.targetMax);
+            const rect = document.getElementById('target-range-rect');
+            const minLine = document.getElementById('target-min-line');
+            const maxLine = document.getElementById('target-max-line');
+            if (rect) {
+                rect.setAttribute('y', yMaxTarget);
+                rect.setAttribute('height', yMinTarget - yMaxTarget);
+            }
+            if (minLine) minLine.setAttribute('y1', yMinTarget);
+            if (minLine) minLine.setAttribute('y2', yMinTarget);
+            if (maxLine) maxLine.setAttribute('y1', yMaxTarget);
+            if (maxLine) maxLine.setAttribute('y2', yMaxTarget);
+            
+            labelsDiv.innerHTML = todayEntries.map(entry => `<span class="text-[10px]">${entry.time}</span>`).join('');
+        }
+
+        function saveProfile() {
+            profileData = {
+                name: document.getElementById('setting-name').value || "Пользователь",
+                uk: parseFloat(document.getElementById('setting-uk').value) || 1.0,
+                targetMin: parseFloat(document.getElementById('setting-min').value) || 4.0,
+                targetMax: parseFloat(document.getElementById('setting-max').value) || 7.8,
+                limitXe: parseFloat(document.getElementById('setting-limit').value) || 15
+            };
+            localStorage.setItem('diablog_profile', JSON.stringify(profileData));
+            applyProfileData();
+            closeSettings();
+            renderHistory();
+            calculateStats();
+            renderSugarChart();
+        }
+        
+        function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+        
+        // drawer logic
+        const drawer = document.getElementById('settings-drawer');
+        const overlay = document.getElementById('drawer-overlay');
+        const handle = document.getElementById('drawer-handle');
+        function openSettings() { overlay.classList.remove('hidden'); requestAnimationFrame(() => { overlay.classList.remove('opacity-0'); overlay.classList.add('opacity-100'); drawer.classList.remove('translate-y-full'); }); }
+        function closeSettings() { overlay.classList.remove('opacity-100'); overlay.classList.add('opacity-0'); drawer.classList.add('translate-y-full'); setTimeout(() => overlay.classList.add('hidden'), 300); }
+        let startY = 0, currentY = 0, isDragging = false;
+        if(handle) {
+            handle.addEventListener('touchstart', (e) => { startY = e.touches[0].clientY; isDragging = true; drawer.style.transition = 'none'; }, { passive: true });
+            handle.addEventListener('touchmove', (e) => { if (!isDragging) return; currentY = e.touches[0].clientY; const deltaY = currentY - startY; if (deltaY > 0) drawer.style.transform = `translateY(${deltaY}px)`; }, { passive: true });
+            handle.addEventListener('touchend', () => { if (!isDragging) return; isDragging = false; drawer.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'; const deltaY = currentY - startY; if (deltaY > 100) { closeSettings(); setTimeout(() => drawer.style.transform = '', 300); } else { drawer.style.transform = 'translateY(0)'; setTimeout(() => drawer.style.transform = '', 300); } });
+        }
+        initApp();
+        window.switchTab = switchTab; window.saveEntry = saveEntry; window.deleteEntry = deleteEntry; window.openEditModal = openEditModal; window.closeEditModal = closeEditModal; window.updateEntry = updateEntry; window.saveProfile = saveProfile; window.openSettings = openSettings; window.closeSettings = closeSettings;
+    </script>
+</body>
+</html>
