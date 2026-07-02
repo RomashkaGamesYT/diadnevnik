@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Дневник диабетика — график сахара</title>
     
-    <!-- FAVICON из папки images -->
     <link rel="icon" type="image/png" href="images/icon.png">
     <link rel="shortcut icon" href="images/icon.png">
     
@@ -58,7 +57,6 @@
             transform: scale(0.95);
         }
         
-        /* Dock панель - увеличенные размеры */
         .dock-container {
             position: fixed;
             bottom: 0;
@@ -168,6 +166,36 @@
         .safe-bottom {
             padding-bottom: max(1rem, env(safe-area-inset-bottom));
         }
+
+        /* Стили для кнопок +/− инсулина */
+        .stepper-btn {
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f3f4f6;
+            border-radius: 12px;
+            transition: all 0.15s;
+        }
+        .stepper-btn:active {
+            transform: scale(0.92);
+            background: #e5e7eb;
+        }
+
+        /* Селектор даты в дневнике */
+        .date-nav-btn {
+            padding: 8px 16px;
+            background: #f3f4f6;
+            border-radius: 100px;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.15s;
+        }
+        .date-nav-btn:active {
+            transform: scale(0.96);
+            background: #e5e7eb;
+        }
     </style>
 </head>
 <body class="bg-gray-100 md:bg-gray-200 text-gray-900 antialiased">
@@ -211,7 +239,7 @@
                         <span class="text-lg font-medium tracking-tight" id="stat-total-xe">--</span>
                     </div>
                     <div class="bg-white border border-gray-200 rounded-xl p-3 sm:p-4 md:col-span-2 flex items-center">
-                        <button onclick="switchTab('view-diary')" class="text-sm font-medium text-gray-900 flex items-center gap-2 hover:text-gray-600 transition-colors w-full justify-center md:justify-start">
+                        <button onclick="openEntryDrawer()" class="text-sm font-medium text-gray-900 flex items-center gap-2 hover:text-gray-600 transition-colors w-full justify-center md:justify-start">
                             <iconify-icon icon="solar:add-circle-linear" width="20"></iconify-icon> Добавить запись
                         </button>
                     </div>
@@ -220,60 +248,51 @@
 
             <!-- DIARY -->
             <section id="view-diary" class="view-section hidden w-full py-4">
-                <div class="md:grid md:grid-cols-12 md:gap-6 lg:gap-8">
-                    <div class="md:col-span-5 flex flex-col gap-5 mb-6 md:mb-0">
-                        <div class="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 shadow-sm">
-                            <div class="flex items-center justify-between mb-5">
-                                <h2 class="text-base font-medium tracking-tight">Новая запись</h2>
-                                <span class="text-xs text-gray-400 font-medium bg-gray-50 px-2 py-1 rounded-md" id="current-time"></span>
-                            </div>
-                            
-                            <form id="entry-form" onsubmit="saveEntry(event)" class="flex flex-col gap-4">
-                                <div class="grid grid-cols-3 gap-2 sm:gap-3">
-                                    <div class="flex flex-col gap-1.5">
-                                        <label class="text-xs text-gray-500 flex items-center gap-1"><iconify-icon icon="solar:waterdrop-linear"></iconify-icon>Сахар</label>
-                                        <input type="number" id="input-sugar" step="0.1" placeholder="5.5" required class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-base rounded-lg px-3 py-2.5 outline-none focus:border-gray-900 focus:bg-white focus:ring-1 focus:ring-gray-900 transition-all">
-                                    </div>
-                                    <div class="flex flex-col gap-1.5">
-                                        <label class="text-xs text-gray-500 flex items-center gap-1"><iconify-icon icon="solar:pie-chart-2-linear"></iconify-icon>ХЕ</label>
-                                        <input type="number" id="input-xe" step="0.5" placeholder="0" class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-base rounded-lg px-3 py-2.5 outline-none focus:border-gray-900 focus:bg-white focus:ring-1 focus:ring-gray-900 transition-all">
-                                    </div>
-                                    <div class="flex flex-col gap-1.5">
-                                        <label class="text-xs text-gray-500 flex items-center gap-1"><iconify-icon icon="solar:syringe-linear"></iconify-icon>Инсулин</label>
-                                        <input type="number" id="input-insulin" step="1" placeholder="0" class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-base rounded-lg px-3 py-2.5 outline-none focus:border-gray-900 focus:bg-white focus:ring-1 focus:ring-gray-900 transition-all">
-                                    </div>
-                                </div>
-                                
-                                <div class="flex flex-col gap-1.5 mb-2">
-                                    <label class="text-xs text-gray-500 flex items-center gap-1"><iconify-icon icon="solar:plate-linear"></iconify-icon>Что съел</label>
-                                    <input type="text" id="input-food" placeholder="Например: Каша овсяная, яблоко" class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg px-3 py-2.5 outline-none focus:border-gray-900 focus:bg-white focus:ring-1 focus:ring-gray-900 transition-all">
-                                </div>
-                                
-                                <button type="submit" class="w-full bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium py-3 rounded-xl transition-colors flex items-center justify-center gap-2">
-                                    <iconify-icon icon="solar:check-circle-linear" width="18"></iconify-icon>
-                                    Сохранить
-                                </button>
-                            </form>
+                <div class="max-w-2xl mx-auto">
+                    <!-- Навигация по датам -->
+                    <div class="flex items-center justify-between mb-5 gap-2 flex-wrap">
+                        <button onclick="changeDate(-1)" class="date-nav-btn flex items-center gap-1">
+                            <iconify-icon icon="solar:arrow-left-linear" width="16"></iconify-icon> Вчера
+                        </button>
+                        <div class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-4 py-2 shadow-sm">
+                            <iconify-icon icon="solar:calendar-linear" width="18" class="text-gray-400"></iconify-icon>
+                            <input type="date" id="diary-date" class="text-sm font-medium bg-transparent outline-none text-center w-32" value="">
                         </div>
+                        <button onclick="changeDate(1)" class="date-nav-btn flex items-center gap-1">
+                            Завтра <iconify-icon icon="solar:arrow-right-linear" width="16"></iconify-icon>
+                        </button>
+                        <button onclick="setTodayDate()" class="text-xs text-emerald-600 bg-emerald-50 px-3 py-2 rounded-full font-medium">Сегодня</button>
                     </div>
 
-                    <div class="md:col-span-7 flex flex-col">
-                        <div class="flex items-center justify-between mb-4 px-1">
-                            <h3 class="text-xs font-medium text-gray-400 uppercase tracking-wider">История за всё время</h3>
-                            <span class="text-xs text-gray-400" id="history-count">0 записей</span>
-                        </div>
-                        <div id="history-list" class="flex flex-col gap-3 max-h-[500px] md:max-h-[600px] overflow-y-auto pb-2">
-                            <!-- JS заполняет -->
-                        </div>
+                    <!-- Заголовок с количеством записей -->
+                    <div class="flex items-center justify-between mb-3 px-1">
+                        <h3 class="text-xs font-medium text-gray-400 uppercase tracking-wider">Записи за день</h3>
+                        <span class="text-xs text-gray-400" id="day-history-count">0 записей</span>
                     </div>
+
+                    <!-- Список записей за выбранный день -->
+                    <div id="day-history-list" class="flex flex-col gap-3 max-h-[500px] md:max-h-[550px] overflow-y-auto pb-2">
+                        <!-- JS заполняет -->
+                    </div>
+
+                    <!-- Кнопка добавления -->
+                    <button onclick="openEntryDrawer()" class="mt-4 w-full py-3 rounded-xl border border-dashed border-gray-300 text-gray-400 text-sm flex items-center justify-center gap-2 hover:border-gray-400 hover:text-gray-600 transition-colors">
+                        <iconify-icon icon="solar:add-circle-linear" width="18"></iconify-icon> Добавить запись за этот день
+                    </button>
                 </div>
             </section>
 
             <!-- CHART -->
             <section id="view-chart" class="view-section hidden flex flex-col gap-5 max-w-3xl mx-auto w-full py-4">
-                <div>
-                    <h2 class="text-xl font-semibold tracking-tight mb-1">Аналитика</h2>
-                    <p class="text-sm text-gray-500">Динамика уровня глюкозы за сегодня</p>
+                <div class="flex items-center justify-between flex-wrap gap-3">
+                    <div>
+                        <h2 class="text-xl font-semibold tracking-tight mb-1">Аналитика</h2>
+                        <p class="text-sm text-gray-500">Динамика уровня глюкозы</p>
+                    </div>
+                    <div class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5">
+                        <iconify-icon icon="solar:calendar-linear" width="16" class="text-gray-400"></iconify-icon>
+                        <input type="date" id="chart-date" class="text-sm bg-transparent outline-none" value="">
+                    </div>
                 </div>
 
                 <div class="bg-white border border-gray-200 rounded-2xl p-4 sm:p-5 shadow-sm">
@@ -311,7 +330,7 @@
                         </div>
                     </div>
                     <div class="mt-7 text-center text-[10px] sm:text-xs text-gray-400 border-t border-gray-100 pt-4">
-                        * График показывает все записи за сегодня, отсортированные по времени
+                        * График показывает все записи за выбранный день, отсортированные по времени
                     </div>
                 </div>
             </section>
@@ -333,7 +352,7 @@
             </section>
         </main>
 
-        <!-- DOCK - УВЕЛИЧЕННЫЕ ИКОНКИ И РАЗМЕРЫ -->
+        <!-- DOCK -->
         <div class="dock-container">
             <nav class="dock-nav">
                 <div id="nav-indicator" class="absolute"></div>
@@ -358,6 +377,86 @@
                     <span>Профиль</span>
                 </button>
             </nav>
+        </div>
+
+        <!-- ШТОРКА ДЛЯ ДОБАВЛЕНИЯ ЗАПИСИ -->
+        <div id="entry-drawer-overlay" class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm z-40 hidden opacity-0 transition-opacity duration-300" onclick="closeEntryDrawer()"></div>
+        
+        <div id="entry-drawer" class="fixed bottom-0 left-0 w-full bg-white rounded-t-[2rem] shadow-[0_-10px_40px_rgb(0,0,0,0.1)] z-50 flex flex-col transition-transform duration-300 translate-y-full max-h-[90vh]">
+            <div id="entry-drawer-handle" class="w-full flex justify-center pt-5 pb-3 touch-none">
+                <div class="w-12 h-1.5 bg-gray-200 rounded-full"></div>
+            </div>
+            <div class="px-5 sm:px-6 pb-8 overflow-y-auto flex flex-col gap-5 safe-bottom">
+                <div>
+                    <h3 class="text-xl font-semibold tracking-tight text-gray-900">Новая запись</h3>
+                    <p class="text-sm text-gray-500 mt-1">Добавьте измерение сахара или приём пищи</p>
+                </div>
+
+                <form id="entry-form-drawer" onsubmit="saveEntryFromDrawer(event)" class="flex flex-col gap-4">
+                    <!-- Дата -->
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-xs font-medium text-gray-500 flex items-center gap-1">
+                            <iconify-icon icon="solar:calendar-linear" width="14"></iconify-icon> Дата
+                        </label>
+                        <input type="date" id="drawer-date" class="w-full bg-gray-50 border border-gray-200 text-sm rounded-xl px-4 py-3 outline-none focus:border-gray-900 transition-colors">
+                    </div>
+
+                    <!-- Время -->
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-xs font-medium text-gray-500 flex items-center gap-1">
+                            <iconify-icon icon="solar:clock-circle-linear" width="14"></iconify-icon> Время
+                        </label>
+                        <input type="time" id="drawer-time" class="w-full bg-gray-50 border border-gray-200 text-sm rounded-xl px-4 py-3 outline-none focus:border-gray-900 transition-colors">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <!-- Сахар -->
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs font-medium text-gray-500 flex items-center gap-1">
+                                <iconify-icon icon="solar:waterdrop-linear" width="14"></iconify-icon> Сахар
+                            </label>
+                            <input type="number" step="0.1" id="drawer-sugar" placeholder="5.5" required class="w-full bg-gray-50 border border-gray-200 text-base rounded-xl px-4 py-3 outline-none focus:border-gray-900 transition-colors">
+                        </div>
+
+                        <!-- ХЕ -->
+                        <div class="flex flex-col gap-1.5">
+                            <label class="text-xs font-medium text-gray-500 flex items-center gap-1">
+                                <iconify-icon icon="solar:pie-chart-2-linear" width="14"></iconify-icon> ХЕ
+                            </label>
+                            <input type="number" step="0.5" id="drawer-xe" placeholder="0" class="w-full bg-gray-50 border border-gray-200 text-base rounded-xl px-4 py-3 outline-none focus:border-gray-900 transition-colors">
+                        </div>
+                    </div>
+
+                    <!-- Инсулин с кнопками +/− -->
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-xs font-medium text-gray-500 flex items-center gap-1">
+                            <iconify-icon icon="solar:syringe-linear" width="14"></iconify-icon> Инсулин (ед)
+                        </label>
+                        <div class="flex items-center gap-3">
+                            <button type="button" onclick="adjustInsulin(-1)" class="stepper-btn">
+                                <iconify-icon icon="solar:minus-linear" width="20"></iconify-icon>
+                            </button>
+                            <input type="number" id="drawer-insulin" step="1" value="0" class="flex-1 bg-gray-50 border border-gray-200 text-center text-lg font-medium rounded-xl px-3 py-3 outline-none focus:border-gray-900 transition-colors">
+                            <button type="button" onclick="adjustInsulin(1)" class="stepper-btn">
+                                <iconify-icon icon="solar:add-linear" width="20"></iconify-icon>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Что съел -->
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-xs font-medium text-gray-500 flex items-center gap-1">
+                            <iconify-icon icon="solar:plate-linear" width="14"></iconify-icon> Что съел
+                        </label>
+                        <input type="text" id="drawer-food" placeholder="Например: Каша овсяная, яблоко" class="w-full bg-gray-50 border border-gray-200 text-sm rounded-xl px-4 py-3 outline-none focus:border-gray-900 transition-colors">
+                    </div>
+
+                    <button type="submit" class="w-full bg-gray-900 hover:bg-gray-800 text-white text-sm font-medium py-3.5 rounded-xl transition-colors flex items-center justify-center gap-2 mt-2">
+                        <iconify-icon icon="solar:check-circle-linear" width="18"></iconify-icon>
+                        Сохранить запись
+                    </button>
+                </form>
+            </div>
         </div>
 
         <!-- SETTINGS DRAWER -->
@@ -409,6 +508,8 @@
             <h3 class="text-lg font-semibold mb-4">Редактировать запись</h3>
             <input type="hidden" id="edit-id">
             <div class="space-y-3">
+                <div><label class="text-xs text-gray-500">Дата</label><input type="date" id="edit-date" class="w-full border border-gray-200 rounded-lg p-2"></div>
+                <div><label class="text-xs text-gray-500">Время</label><input type="time" id="edit-time" class="w-full border border-gray-200 rounded-lg p-2"></div>
                 <div><label class="text-xs text-gray-500">Сахар</label><input type="number" step="0.1" id="edit-sugar" class="w-full border border-gray-200 rounded-lg p-2"></div>
                 <div><label class="text-xs text-gray-500">ХЕ</label><input type="number" step="0.5" id="edit-xe" class="w-full border border-gray-200 rounded-lg p-2"></div>
                 <div><label class="text-xs text-gray-500">Инсулин</label><input type="number" step="1" id="edit-insulin" class="w-full border border-gray-200 rounded-lg p-2"></div>
@@ -426,12 +527,22 @@
             name: "Алексей", uk: 1.5, targetMin: 4.0, targetMax: 7.8, limitXe: 15
         };
         let diaryEntries = JSON.parse(localStorage.getItem('diablog_entries')) || [];
+        let currentSelectedDate = new Date().toISOString().split('T')[0];
 
         function initApp() {
             updateTimeLoop();
             applyProfileData();
-            renderHistory();
+            
+            // Устанавливаем сегодняшнюю дату в селекторы
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('diary-date').value = today;
+            document.getElementById('chart-date').value = today;
+            document.getElementById('drawer-date').value = today;
+            
+            renderDayHistory();
             calculateStats();
+            renderSugarChart();
+            
             setTimeout(() => {
                 const homeBtn = document.getElementById('btn-home');
                 if (homeBtn) updateNavIndicator(homeBtn);
@@ -488,6 +599,7 @@
             
             if (tabId === 'view-home') calculateStats();
             if (tabId === 'view-chart') renderSugarChart();
+            if (tabId === 'view-diary') renderDayHistory();
         }
 
         function applyProfileData() {
@@ -501,81 +613,101 @@
             document.getElementById('setting-limit').value = profileData.limitXe;
         }
 
-        function saveEntry(e) {
+        // Функции для работы с датами в дневнике
+        function changeDate(delta) {
+            const dateInput = document.getElementById('diary-date');
+            let date = new Date(dateInput.value);
+            date.setDate(date.getDate() + delta);
+            const newDate = date.toISOString().split('T')[0];
+            dateInput.value = newDate;
+            currentSelectedDate = newDate;
+            renderDayHistory();
+        }
+
+        function setTodayDate() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('diary-date').value = today;
+            currentSelectedDate = today;
+            renderDayHistory();
+        }
+
+        // Получить записи за конкретную дату
+        function getEntriesByDate(date) {
+            return diaryEntries.filter(entry => entry.date === date)
+                .sort((a, b) => a.time.localeCompare(b.time));
+        }
+
+        // Сохранение записи из шторки
+        function saveEntryFromDrawer(e) {
             e.preventDefault();
-            const sugar = parseFloat(document.getElementById('input-sugar').value);
-            const xe = parseFloat(document.getElementById('input-xe').value) || 0;
-            const insulin = parseFloat(document.getElementById('input-insulin').value) || 0;
-            const food = document.getElementById('input-food').value.trim();
-            const time = new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
-            const entry = { id: Date.now(), time, sugar, xe, insulin, food };
-            diaryEntries.unshift(entry);
-            localStorage.setItem('diablog_entries', JSON.stringify(diaryEntries));
-            document.getElementById('entry-form').reset();
-            renderHistory();
-            calculateStats();
-            renderSugarChart();
-        }
-
-        function deleteEntry(entryId) {
-            if (confirm('Удалить запись?')) {
-                diaryEntries = diaryEntries.filter(e => e.id !== entryId);
-                localStorage.setItem('diablog_entries', JSON.stringify(diaryEntries));
-                renderHistory();
-                calculateStats();
-                renderSugarChart();
-            }
-        }
-
-        let currentEditId = null;
-        function openEditModal(entryId) {
-            const entry = diaryEntries.find(e => e.id === entryId);
-            if (!entry) return;
-            currentEditId = entryId;
-            document.getElementById('edit-id').value = entryId;
-            document.getElementById('edit-sugar').value = entry.sugar;
-            document.getElementById('edit-xe').value = entry.xe;
-            document.getElementById('edit-insulin').value = entry.insulin;
-            document.getElementById('edit-food').value = entry.food || '';
-            document.getElementById('edit-modal').classList.remove('hidden');
-        }
-
-        function closeEditModal(event) {
-            if (event && event.target !== event.currentTarget && event.target.closest('#edit-modal')) return;
-            document.getElementById('edit-modal').classList.add('hidden');
-            currentEditId = null;
-        }
-
-        function updateEntry() {
-            if (!currentEditId) return;
-            const newSugar = parseFloat(document.getElementById('edit-sugar').value);
-            const newXe = parseFloat(document.getElementById('edit-xe').value) || 0;
-            const newInsulin = parseFloat(document.getElementById('edit-insulin').value) || 0;
-            const newFood = document.getElementById('edit-food').value.trim();
-            const index = diaryEntries.findIndex(e => e.id === currentEditId);
-            if (index !== -1) {
-                diaryEntries[index] = { ...diaryEntries[index], sugar: newSugar, xe: newXe, insulin: newInsulin, food: newFood };
-                localStorage.setItem('diablog_entries', JSON.stringify(diaryEntries));
-                renderHistory();
-                calculateStats();
-                renderSugarChart();
-            }
-            closeEditModal();
-        }
-
-        function renderHistory() {
-            const list = document.getElementById('history-list');
-            const countLabel = document.getElementById('history-count');
-            if (!list) return;
-            list.innerHTML = '';
-            countLabel.innerText = `${diaryEntries.length} записей`;
+            const date = document.getElementById('drawer-date').value;
+            const time = document.getElementById('drawer-time').value;
+            const sugar = parseFloat(document.getElementById('drawer-sugar').value);
+            const xe = parseFloat(document.getElementById('drawer-xe').value) || 0;
+            const insulin = parseFloat(document.getElementById('drawer-insulin').value) || 0;
+            const food = document.getElementById('drawer-food').value.trim();
             
-            if (diaryEntries.length === 0) {
-                list.innerHTML = `<div class="text-center text-sm text-gray-400 py-8">Пока нет записей. Добавьте первую!</div>`;
+            if (!date || !time || isNaN(sugar)) {
+                alert('Заполните дату, время и сахар');
                 return;
             }
             
-            diaryEntries.forEach(entry => {
+            const entry = { 
+                id: Date.now(), 
+                date: date,
+                time: time,
+                sugar: sugar, 
+                xe: xe, 
+                insulin: insulin, 
+                food: food 
+            };
+            
+            diaryEntries.push(entry);
+            localStorage.setItem('diablog_entries', JSON.stringify(diaryEntries));
+            
+            // Очищаем форму
+            document.getElementById('drawer-sugar').value = '';
+            document.getElementById('drawer-xe').value = '';
+            document.getElementById('drawer-insulin').value = '0';
+            document.getElementById('drawer-food').value = '';
+            document.getElementById('drawer-time').value = '';
+            
+            closeEntryDrawer();
+            renderDayHistory();
+            calculateStats();
+            renderSugarChart();
+            
+            // Если график открыт на другой дате, не трогаем, если на этой — обновим
+            const chartDate = document.getElementById('chart-date').value;
+            if (chartDate === date) renderSugarChart();
+        }
+
+        function adjustInsulin(delta) {
+            const input = document.getElementById('drawer-insulin');
+            let val = parseFloat(input.value) || 0;
+            val = Math.max(0, val + delta);
+            input.value = val;
+        }
+
+        // Рендер истории за выбранный день
+        function renderDayHistory() {
+            const date = document.getElementById('diary-date').value;
+            if (!date) return;
+            
+            const dayEntries = getEntriesByDate(date);
+            const list = document.getElementById('day-history-list');
+            const countLabel = document.getElementById('day-history-count');
+            
+            if (!list) return;
+            list.innerHTML = '';
+            countLabel.innerText = `${dayEntries.length} записей`;
+            
+            if (dayEntries.length === 0) {
+                list.innerHTML = `<div class="text-center text-sm text-gray-400 py-8">Нет записей за этот день</div>`;
+                return;
+            }
+            
+            dayEntries.forEach(entry => {
                 let sugarColor = 'text-gray-900';
                 if (entry.sugar < profileData.targetMin) sugarColor = 'text-blue-500';
                 else if (entry.sugar > profileData.targetMax) sugarColor = 'text-red-500';
@@ -610,6 +742,65 @@
             });
         }
 
+        function deleteEntry(entryId) {
+            if (confirm('Удалить запись?')) {
+                diaryEntries = diaryEntries.filter(e => e.id !== entryId);
+                localStorage.setItem('diablog_entries', JSON.stringify(diaryEntries));
+                renderDayHistory();
+                calculateStats();
+                renderSugarChart();
+            }
+        }
+
+        let currentEditId = null;
+        function openEditModal(entryId) {
+            const entry = diaryEntries.find(e => e.id === entryId);
+            if (!entry) return;
+            currentEditId = entryId;
+            document.getElementById('edit-id').value = entryId;
+            document.getElementById('edit-date').value = entry.date || '';
+            document.getElementById('edit-time').value = entry.time || '';
+            document.getElementById('edit-sugar').value = entry.sugar;
+            document.getElementById('edit-xe').value = entry.xe;
+            document.getElementById('edit-insulin').value = entry.insulin;
+            document.getElementById('edit-food').value = entry.food || '';
+            document.getElementById('edit-modal').classList.remove('hidden');
+        }
+
+        function closeEditModal(event) {
+            if (event && event.target !== event.currentTarget && event.target.closest('#edit-modal')) return;
+            document.getElementById('edit-modal').classList.add('hidden');
+            currentEditId = null;
+        }
+
+        function updateEntry() {
+            if (!currentEditId) return;
+            const newDate = document.getElementById('edit-date').value;
+            const newTime = document.getElementById('edit-time').value;
+            const newSugar = parseFloat(document.getElementById('edit-sugar').value);
+            const newXe = parseFloat(document.getElementById('edit-xe').value) || 0;
+            const newInsulin = parseFloat(document.getElementById('edit-insulin').value) || 0;
+            const newFood = document.getElementById('edit-food').value.trim();
+            
+            const index = diaryEntries.findIndex(e => e.id === currentEditId);
+            if (index !== -1) {
+                diaryEntries[index] = { 
+                    ...diaryEntries[index], 
+                    date: newDate,
+                    time: newTime,
+                    sugar: newSugar, 
+                    xe: newXe, 
+                    insulin: newInsulin, 
+                    food: newFood 
+                };
+                localStorage.setItem('diablog_entries', JSON.stringify(diaryEntries));
+                renderDayHistory();
+                calculateStats();
+                renderSugarChart();
+            }
+            closeEditModal();
+        }
+
         function calculateStats() {
             if (diaryEntries.length === 0) { 
                 document.getElementById('stat-avg-sugar').innerText = '--'; 
@@ -624,11 +815,10 @@
         }
 
         function renderSugarChart() {
-            const todayStr = new Date().toLocaleDateString('ru-RU');
-            const todayEntries = diaryEntries.filter(entry => {
-                const entryDate = new Date(entry.id).toLocaleDateString('ru-RU');
-                return entryDate === todayStr;
-            }).sort((a,b) => a.id - b.id);
+            const selectedDate = document.getElementById('chart-date').value;
+            if (!selectedDate) return;
+            
+            const dayEntries = getEntriesByDate(selectedDate);
             
             const polyline = document.getElementById('sugar-polyline');
             const dotsGroup = document.getElementById('sugar-dots-group');
@@ -637,17 +827,17 @@
             
             if (!polyline) return;
             
-            if (todayEntries.length === 0) {
+            if (dayEntries.length === 0) {
                 polyline.setAttribute('opacity', '0');
                 if(dotsGroup) dotsGroup.innerHTML = '';
-                if(labelsDiv) labelsDiv.innerHTML = '<span class="text-gray-400 w-full text-center">Нет записей за сегодня</span>';
+                if(labelsDiv) labelsDiv.innerHTML = '<span class="text-gray-400 w-full text-center">Нет записей за выбранный день</span>';
                 if(emptyMsg) emptyMsg.innerText = 'Нет данных';
                 return;
             }
             
-            if(emptyMsg) emptyMsg.innerText = `${todayEntries.length} записей`;
+            if(emptyMsg) emptyMsg.innerText = `${dayEntries.length} записей`;
             
-            const values = todayEntries.map(e => Math.min(15, Math.max(0, e.sugar)));
+            const values = dayEntries.map(e => Math.min(15, Math.max(0, e.sugar)));
             const yScale = (val) => 100 - ((val - 0) / 15) * 100;
             const points = values.map((v, idx) => ({ x: (idx / (values.length - 1 || 1)) * 100, y: yScale(v) }));
             
@@ -659,8 +849,8 @@
                 dotsGroup.innerHTML = '';
                 points.forEach((p, i) => {
                     let fillColor = '#111827';
-                    if (todayEntries[i].sugar < profileData.targetMin) fillColor = '#3b82f6';
-                    else if (todayEntries[i].sugar > profileData.targetMax) fillColor = '#ef4444';
+                    if (dayEntries[i].sugar < profileData.targetMin) fillColor = '#3b82f6';
+                    else if (dayEntries[i].sugar > profileData.targetMax) fillColor = '#ef4444';
                     else fillColor = '#10b981';
                     const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
                     dot.setAttribute("cx", p.x);
@@ -687,7 +877,7 @@
             if (maxLine) maxLine.setAttribute('y1', yMaxTarget);
             if (maxLine) maxLine.setAttribute('y2', yMaxTarget);
             
-            if(labelsDiv) labelsDiv.innerHTML = todayEntries.map(entry => `<span class="text-[9px] sm:text-[10px]">${entry.time}</span>`).join('');
+            if(labelsDiv) labelsDiv.innerHTML = dayEntries.map(entry => `<span class="text-[9px] sm:text-[10px]">${entry.time}</span>`).join('');
         }
 
         function saveProfile() {
@@ -701,7 +891,7 @@
             localStorage.setItem('diablog_profile', JSON.stringify(profileData));
             applyProfileData();
             closeSettings();
-            renderHistory();
+            renderDayHistory();
             calculateStats();
             renderSugarChart();
         }
@@ -716,6 +906,34 @@
             }); 
         }
         
+        // Шторка для добавления записи
+        const entryDrawer = document.getElementById('entry-drawer');
+        const entryOverlay = document.getElementById('entry-drawer-overlay');
+        const entryHandle = document.getElementById('entry-drawer-handle');
+        
+        function openEntryDrawer() {
+            // Устанавливаем текущие дату и время
+            const now = new Date();
+            document.getElementById('drawer-date').value = now.toISOString().split('T')[0];
+            document.getElementById('drawer-time').value = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('drawer-insulin').value = '0';
+            
+            entryOverlay.classList.remove('hidden');
+            requestAnimationFrame(() => {
+                entryOverlay.classList.remove('opacity-0');
+                entryOverlay.classList.add('opacity-100');
+                entryDrawer.classList.remove('translate-y-full');
+            });
+        }
+        
+        function closeEntryDrawer() {
+            entryOverlay.classList.remove('opacity-100');
+            entryOverlay.classList.add('opacity-0');
+            entryDrawer.classList.add('translate-y-full');
+            setTimeout(() => entryOverlay.classList.add('hidden'), 300);
+        }
+        
+        // Настройки профиля
         const drawer = document.getElementById('settings-drawer');
         const overlay = document.getElementById('drawer-overlay');
         const handle = document.getElementById('drawer-handle');
@@ -734,6 +952,35 @@
             overlay.classList.add('opacity-0'); 
             drawer.classList.add('translate-y-full'); 
             setTimeout(() => overlay.classList.add('hidden'), 300); 
+        }
+        
+        // Обработчики для свайпа шторки добавления
+        if(entryHandle) {
+            let startY = 0, currentY = 0, isDragging = false;
+            entryHandle.addEventListener('touchstart', (e) => { 
+                startY = e.touches[0].clientY; 
+                isDragging = true; 
+                entryDrawer.style.transition = 'none'; 
+            });
+            entryHandle.addEventListener('touchmove', (e) => { 
+                if (!isDragging) return; 
+                currentY = e.touches[0].clientY; 
+                const deltaY = currentY - startY; 
+                if (deltaY > 0) entryDrawer.style.transform = `translateY(${deltaY}px)`; 
+            });
+            entryHandle.addEventListener('touchend', () => { 
+                if (!isDragging) return; 
+                isDragging = false; 
+                entryDrawer.style.transition = 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'; 
+                const deltaY = currentY - startY; 
+                if (deltaY > 100) { 
+                    closeEntryDrawer(); 
+                    setTimeout(() => entryDrawer.style.transform = '', 300); 
+                } else { 
+                    entryDrawer.style.transform = 'translateY(0)'; 
+                    setTimeout(() => entryDrawer.style.transform = '', 300); 
+                } 
+            });
         }
         
         if(handle) {
@@ -764,10 +1011,19 @@
             });
         }
         
+        // Слушатель изменения даты в дневнике
+        document.getElementById('diary-date')?.addEventListener('change', function() {
+            renderDayHistory();
+        });
+        
+        document.getElementById('chart-date')?.addEventListener('change', function() {
+            renderSugarChart();
+        });
+        
         initApp();
         
         window.switchTab = switchTab;
-        window.saveEntry = saveEntry;
+        window.saveEntryFromDrawer = saveEntryFromDrawer;
         window.deleteEntry = deleteEntry;
         window.openEditModal = openEditModal;
         window.closeEditModal = closeEditModal;
@@ -775,6 +1031,11 @@
         window.saveProfile = saveProfile;
         window.openSettings = openSettings;
         window.closeSettings = closeSettings;
+        window.openEntryDrawer = openEntryDrawer;
+        window.closeEntryDrawer = closeEntryDrawer;
+        window.adjustInsulin = adjustInsulin;
+        window.changeDate = changeDate;
+        window.setTodayDate = setTodayDate;
     </script>
 </body>
 </html>
